@@ -1,3 +1,4 @@
+use core::panic;
 use std::ops::Deref;
 
 // use std::iter::Iterator;
@@ -17,7 +18,13 @@ pub struct MyListIterator<'a, T>{
     next: Option<&'a Node<T>>
 }
 
+pub struct MyListIterMut<'a, T>{
+    next: Option<&'a mut Node<T>>
+}
 
+pub struct MyListIntoIter<T>(MyList<T>);
+
+#[allow(dead_code)]
 impl<T> Node<T> {
     fn new(val: T) ->Self{
         Node {
@@ -56,8 +63,28 @@ impl<T> Node<T> {
     fn peek(&self)->&T{
         &self.value
     }
+
+    fn insert_node(&mut self, val:T){
+        let mut new_node = Self::new(val);
+        new_node.next = self.next.take();
+        self.next = Some(Box::new(new_node))
+    }
+
+    fn push_at(&mut self, position: usize, val: T){
+        let mut temp = self;
+        let mut i = 0 as usize;
+        loop {
+            if i == position - 1{
+                break;
+            }
+            temp = temp.next.as_deref_mut().unwrap();
+            i+=1;
+        }
+        temp.insert_node(val)
+    }
 }
 
+#[allow(dead_code)]
 impl<T> MyList<T>{
     pub fn new(val: T) -> Self{
         MyList{
@@ -66,11 +93,15 @@ impl<T> MyList<T>{
     }
 
     pub fn push(&mut self,val: T){
+        if self.is_empty(){
+            *self = MyList::new(val);
+            return;
+        }
         self.head.as_mut().unwrap().push(val);
     }
 
     pub fn pop(&mut self) -> Option<T>{
-        if self.head.is_none(){return None;}
+        if self.is_empty(){return None;}
         else if self.head.as_ref().unwrap().next.is_none(){
             let replacement = self.head.take();
             return Some(replacement.unwrap().value);
@@ -89,8 +120,8 @@ impl<T> MyList<T>{
     }
 
     pub fn remove(&mut self)-> T{
-        if self.head.is_none() {
-            panic!("Cant remove since list is empty.")
+        if self.is_empty() {
+            panic!("Can't remove since list is empty.")
         }
         if self.head.as_ref().unwrap().next.is_none(){
             let replacement = self.head.take();
@@ -107,10 +138,64 @@ impl<T> MyList<T>{
     }
 
     pub fn push_front(&mut self, val:T){
-        let new_head = Box::new()
+        if self.is_empty(){
+            *self = MyList::new(val);
+            return;
+        }
+        let mut new_head = Node::new(val);
+        let new_next = self.head.take();
+        new_head.next = Some(Box::new(new_next.unwrap()));
+        self.head = Some(new_head);
     }
     
+    pub fn pop_front(&mut self)-> Option<T>{
+        if self.is_empty(){
+            return None;
+        }
+        let mut return_val = self.head.take();
+        let old_head_next = return_val.as_mut().unwrap().next.take();
+        if old_head_next.is_some()
+        {
+            self.head = Some(*(old_head_next.unwrap()));
+        }else{
+            self.head = None;
+        }
+
+        Some(return_val.unwrap().value)
+    }
+
+    pub fn is_empty(&self) -> bool{
+        self.head.is_none()
+    }
+
+    pub fn into_iter(self) -> MyListIntoIter<T>{
+        MyListIntoIter(self)
+    }
+
+    pub fn iter_mut<'a>(&'a mut self) -> MyListIterMut<'a, T>{
+        MyListIterMut{
+            next: self.head.as_mut()
+        }
+    }
+
+    pub fn push_at(&mut self, position: usize, val: T){
+        if position == 0{
+            self.push_front(val);
+            return;
+        }
+        if self.peek_at(position).is_none(){
+            if self.peek_at(position-1).is_some(){
+                self.push(val);
+                return;
+            }
+            else{
+                panic!("Can't push over the limit 🤷‍♀️")
+            }
+        }
+        self.head.as_mut().unwrap().push_at(position,val)
+    }
 }
+
 
 impl<'a, T> Iterator for MyListIterator<'a, T> {
     type Item = &'a T;
@@ -131,19 +216,26 @@ impl<'a, T> Iterator for MyListIterator<'a, T> {
     }
 }
 
-
-#[cfg(test)]
-mod tests{
-    use super::*;
-    #[test]
-    fn popper(){
-        let mut ll = MyList::new(6);
-        ll.push(7);
-        ll.push(8);
-        ll.pop();
-        let mut iter_ll = ll.iter();
-        assert_eq!(iter_ll.next(),Some(&6));
-        assert_eq!(iter_ll.next(),Some(&7));
-        assert_eq!(iter_ll.next(),None);
+impl<T> Iterator for MyListIntoIter<T>{
+    type Item = T;
+    fn next(&mut self) -> Option<Self::Item>{
+        self.0.pop_front()
     }
 }
+
+impl<'a,T> Iterator for MyListIterMut<'a,T>{
+    type Item = &'a mut T;
+
+    fn next(&mut self) -> Option<Self::Item>{
+        if self.next.is_none(){
+            return None;
+        }
+        self.next.take().map(|node | {
+            self.next = node.next.as_deref_mut();
+            &mut node.value
+        }
+        )
+        
+    }
+}
+
