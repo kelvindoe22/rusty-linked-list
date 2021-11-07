@@ -6,6 +6,7 @@ use std::ops::Deref;
 pub struct MyList<T>{
     head: Option<Node<T>>
 }
+
 #[derive(Debug)]
 struct Node<T>{
     value: T,
@@ -89,7 +90,7 @@ impl<T> MyList<T>{
 
     pub fn remove(&mut self)-> T{
         if self.head.is_none() {
-            panic!("Empty lol")
+            panic!("Cant remove since list is empty.")
         }
         if self.head.as_ref().unwrap().next.is_none(){
             let replacement = self.head.take();
@@ -105,9 +106,10 @@ impl<T> MyList<T>{
         }
     }
 
-    pub fn _index(&mut self, _position: u32){
-        unimplemented!();
+    pub fn push_front(&mut self, val:T){
+        let new_head = Box::new()
     }
+    
 }
 
 impl<'a, T> Iterator for MyListIterator<'a, T> {
