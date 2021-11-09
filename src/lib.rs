@@ -4,7 +4,6 @@
 
 
 use core::panic;
-use std::ops::Deref;
 
 // use std::iter::Iterator;
 
@@ -40,7 +39,7 @@ impl<T> Node<T> {
 
     fn push(&mut self, val: T){
         let mut temp = self;
-        while !temp.next.is_none() {
+        while temp.next.is_some() {
             temp = temp.next.as_mut().unwrap()
         }
         temp.next = Some(Box::new(Node::new(val)));
@@ -48,7 +47,7 @@ impl<T> Node<T> {
 
     fn pop(&mut self) -> Option<T>{
         let mut temp = self;
-        while !temp.next.as_ref().unwrap().next.is_none(){
+        while temp.next.as_ref().unwrap().next.is_some(){
             temp = temp.next.as_mut().unwrap();
         }
         let replacement = temp.next.take();
@@ -58,7 +57,7 @@ impl<T> Node<T> {
     fn remove(&mut self) -> T{
         let replacement;
         let mut temp = self;
-        while !temp.next.as_ref().unwrap().next.is_none(){
+        while temp.next.as_ref().unwrap().next.is_some(){
             temp = temp.next.as_mut().unwrap();
         }
         replacement = temp.next.take();
@@ -77,7 +76,7 @@ impl<T> Node<T> {
 
     fn push_at(&mut self, position: usize, val: T){
         let mut temp = self;
-        let mut i = 0 as usize;
+        let mut i = 0_usize;
         loop {
             if i == position - 1{
                 break;
@@ -154,10 +153,10 @@ impl<T> MyList<T>{
     /// ```
     /// 
     pub fn pop(&mut self) -> Option<T>{
-        if self.is_empty(){return None;}
+        if self.is_empty(){None}
         else if self.head.as_ref().unwrap().next.is_none(){
             let replacement = self.head.take();
-            return Some(replacement.unwrap().value);
+            Some(replacement.unwrap().value)
         }else{
             self.head.as_mut().unwrap().pop()
         }
@@ -241,7 +240,7 @@ impl<T> MyList<T>{
     /// assert_eq!(iter.next(),None)
     /// ```
     /// 
-    pub fn iter<'a>(&'a self)->MyListIterator<'a,T>{
+    pub fn iter(&self)->MyListIterator<'_,T>{
         let iterable = self.head.as_ref();
         MyListIterator{
             next: iterable
@@ -289,9 +288,8 @@ impl<T> MyList<T>{
         }
         let mut return_val = self.head.take();
         let old_head_next = return_val.as_mut().unwrap().next.take();
-        if old_head_next.is_some()
-        {
-            self.head = Some(*(old_head_next.unwrap()));
+        if let Some(val) = old_head_next{
+            self.head = Some(*val);
         }else{
             self.head = None;
         }
@@ -318,7 +316,7 @@ impl<T> MyList<T>{
         MyListIntoIter(self)
     }
 
-    pub fn iter_mut<'a>(&'a mut self) -> MyListIterMut<'a, T>{
+    pub fn iter_mut(&mut self) -> MyListIterMut<'_, T>{
         MyListIterMut{
             next: self.head.as_mut()
         }
@@ -360,18 +358,9 @@ impl<'a, T> Iterator for MyListIterator<'a, T> {
     type Item = &'a T;
 
     fn next(&mut self)->Option<Self::Item>{
-        if self.next.is_none(){
-            return None;
-        }
-        let temp = self.next.as_ref().unwrap().peek();
-        if self.next.as_ref().unwrap().next.is_some()
-        {
-            let next_next = self.next.as_ref().unwrap().next.as_ref().unwrap().deref();
-            self.next = Some(next_next);
-        }else{
-            self.next = None;
-        }
-        Some(temp)
+        let node = self.next.take()?;
+        self.next = node.next.as_deref().take();
+        Some(&node.value)
     }
 }
 
@@ -386,15 +375,9 @@ impl<'a,T> Iterator for MyListIterMut<'a,T>{
     type Item = &'a mut T;
 
     fn next(&mut self) -> Option<Self::Item>{
-        if self.next.is_none(){
-            return None;
-        }
-        self.next.take().map(|node | {
-            self.next = node.next.as_deref_mut();
-            &mut node.value
-        }
-        )
-        
+        let node = self.next.take()?;
+        self.next = node.next.as_deref_mut().take();
+        Some(&mut node.value)
     }
 }
 
