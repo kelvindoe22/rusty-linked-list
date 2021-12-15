@@ -4,15 +4,17 @@
 
 
 use core::panic;
+use std::iter::FromIterator;
+use std::fmt;
 
 // use std::iter::Iterator;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MyList<T>{
     head: Option<Node<T>>
 }
 
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 struct Node<T>{
     value: T,
     next: Option<Box<Node<T>>>
@@ -147,9 +149,9 @@ impl<T> MyList<T>{
     /// let popped_element: Option<u32> = list.pop();
     /// let another_popped_element: Option<u32> = list.pop();
     /// let none_value: Option<u32> = list.pop(); // this will return None since List is empty
-    /// assert_eq!(popped_value,Some(5));
-    /// assert_eq!(another_popped_value, Some(4));
-    /// assert_eq!(none_value, None);
+    /// assert_eq!(popped_element,Some(5));
+    /// assert_eq!(another_popped_element, Some(4));
+    /// assert_eq!(none_element, None);
     /// ```
     /// 
     pub fn pop(&mut self) -> Option<T>{
@@ -353,6 +355,17 @@ impl<T> MyList<T>{
     }
 }
 
+impl<T> FromIterator<T> for MyList<T> {
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self{
+        let mut ll = MyList::new_null();
+        
+        for i in iter {
+            ll.push(i)
+        }
+
+        ll
+    }
+}
 
 impl<'a, T> Iterator for MyListIterator<'a, T> {
     type Item = &'a T;
@@ -361,6 +374,17 @@ impl<'a, T> Iterator for MyListIterator<'a, T> {
         let node = self.next.take()?;
         self.next = node.next.as_deref().take();
         Some(&node.value)
+    }
+}
+
+impl<T> fmt::Display for MyList<T>
+where T: fmt::Display{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let ret = self.iter()
+        .map(|x| format!("{}",x))
+        .collect::<Vec<_>>()
+        .join(" -> ");
+        write!(f,"{}",ret)
     }
 }
 
